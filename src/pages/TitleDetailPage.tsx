@@ -44,7 +44,7 @@ export function TitleDetailPage() {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 text-center">
         <p className="font-ko text-[var(--color-muted)]">작품을 찾을 수 없습니다.</p>
-        <Link to="/" className="mt-4 inline-block text-[var(--color-gold)]">
+        <Link to="/app" className="mt-4 inline-block text-[var(--color-gold)]">
           홈으로
         </Link>
       </div>
@@ -54,7 +54,7 @@ export function TitleDetailPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 pb-16 pt-6 sm:px-6">
       <Link
-        to="/"
+        to="/app"
         className="font-ko text-sm text-[var(--color-muted)] hover:text-[var(--color-gold)]"
       >
         ← 홈

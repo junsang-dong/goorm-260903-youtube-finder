@@ -79,6 +79,11 @@
     background-size: 200% 100%;
     animation: shimmer 1.4s linear infinite;
   }
+
+  .intro-page {
+    background: #000;
+    color: #fff;
+  }
 }
 
 @keyframes fadeUp {

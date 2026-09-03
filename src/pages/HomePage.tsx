@@ -79,6 +79,12 @@ export function HomePage() {
             골라 드립니다.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
+            <Link
+              to="/"
+              className="rounded-lg border border-[var(--color-line)] px-4 py-2 text-sm text-[var(--color-cream)] hover:border-[var(--color-gold)]"
+            >
+              제품 소개
+            </Link>
             <button
               type="button"
               onClick={() =>

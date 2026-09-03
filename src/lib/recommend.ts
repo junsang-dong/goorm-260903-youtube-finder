@@ -14,6 +14,36 @@ function ageInDays(publishedAt: string, now = Date.now()): number {
   return Math.max((now - new Date(publishedAt).getTime()) / 86_400_000, 0)
 }
 
+/** 3개월 / 6개월 / 1년 구간별 최신성 가중치 */
+export function recencyBoost(ageDays: number): number {
+  if (ageDays <= 90) return 1
+  if (ageDays <= 180) return 0.72
+  if (ageDays <= 365) return 0.42
+  return 0.08
+}
+
+function risingScore(video: RecommendedVideo): number {
+  const age = Math.max(ageInDays(video.publishedAt), 1)
+  const velocity = Math.log10(video.viewCount / age + 1)
+  const boost = recencyBoost(age)
+  // 조회수 속도 + 최신성(3·6·12개월) 가산
+  return velocity * (0.35 + 0.65 * boost) + boost * 2.5
+}
+
+function popularScore(video: RecommendedVideo): number {
+  const age = Math.max(ageInDays(video.publishedAt), 1)
+  const boost = recencyBoost(age)
+  const viewScore = Math.min(Math.log10(video.viewCount + 1) / 7, 1)
+  const engagement =
+    (video.likeCount + video.commentCount * 2) / Math.max(video.viewCount, 1)
+  return (
+    boost * 0.55 +
+    viewScore * 0.25 +
+    Math.min(engagement * 20, 1) * 0.1 +
+    Math.min(video.popularityScore, 1) * 0.1
+  )
+}
+
 function durationMatches(
   seconds: number,
   bucket: DurationBucket | 'any',
@@ -80,7 +110,15 @@ export function buildRecommendationReason(
 ): string {
   const age = ageInDays(video.publishedAt)
   const when =
-    age <= 1 ? '오늘' : age <= 7 ? '최근 7일 내' : age <= 30 ? '최근 30일 내' : '이전에'
+    age <= 1
+      ? '오늘'
+      : age <= 90
+        ? '최근 3개월 내'
+        : age <= 180
+          ? '최근 6개월 내'
+          : age <= 365
+            ? '최근 1년 내'
+            : '이전에'
   const genre =
     video.genres.find((g) => prefs.genres.includes(g)) ?? video.genres[0]
   const genreLabel: Record<Genre, string> = {
@@ -121,7 +159,7 @@ export function scoreVideo(
 ): RecommendedVideo {
   const preferenceScore = computePreferenceScore(video, prefs)
   const age = Math.max(ageInDays(video.publishedAt), 1)
-  const freshnessScore = 1 / (age + 1)
+  const freshnessScore = recencyBoost(age)
   const velocityScore = Math.log10(video.viewCount / age + 1) / 6
   const engagementRate =
     (video.likeCount + video.commentCount * 2) / Math.max(video.viewCount, 1)
@@ -129,9 +167,9 @@ export function scoreVideo(
   const trust = channelTrustScore(video.channelTitle)
 
   const recommendationScore =
-    preferenceScore * 0.35 +
-    freshnessScore * 0.25 +
-    Math.min(velocityScore, 1) * 0.2 +
+    preferenceScore * 0.3 +
+    freshnessScore * 0.35 +
+    Math.min(velocityScore, 1) * 0.15 +
     engagementScore * 0.15 +
     trust * 0.05
 
@@ -177,16 +215,10 @@ export function sortVideos(
 ): RecommendedVideo[] {
   const copy = [...videos]
   if (sortBy === 'popular') {
-    return copy.sort((a, b) => b.popularityScore - a.popularityScore)
+    return copy.sort((a, b) => popularScore(b) - popularScore(a))
   }
   if (sortBy === 'rising') {
-    return copy.sort((a, b) => {
-      const va =
-        Math.log10(a.viewCount / Math.max(ageInDays(a.publishedAt), 1) + 1)
-      const vb =
-        Math.log10(b.viewCount / Math.max(ageInDays(b.publishedAt), 1) + 1)
-      return vb - va
-    })
+    return copy.sort((a, b) => risingScore(b) - risingScore(a))
   }
   return copy.sort((a, b) => b.recommendationScore - a.recommendationScore)
 }

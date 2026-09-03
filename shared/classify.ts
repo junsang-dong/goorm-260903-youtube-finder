@@ -52,6 +52,17 @@ export function ageInDays(publishedAt: string, now = Date.now()): number {
   return Math.max((now - published) / (1000 * 60 * 60 * 24), 0)
 }
 
+/**
+ * 업로드 시점에 따른 최신성 가중치.
+ * 3개월 > 6개월 > 1년 > 그 이전 순으로 높은 점수.
+ */
+export function recencyBoost(ageDays: number): number {
+  if (ageDays <= 90) return 1
+  if (ageDays <= 180) return 0.72
+  if (ageDays <= 365) return 0.42
+  return 0.08
+}
+
 export function basePopularityScore(
   viewCount: number,
   likeCount: number,
@@ -61,6 +72,11 @@ export function basePopularityScore(
   const age = Math.max(ageInDays(publishedAt), 1)
   const velocity = Math.log10(viewCount / age + 1)
   const engagement = (likeCount + commentCount * 2) / Math.max(viewCount, 1)
-  const freshness = 1 / (age + 1)
-  return velocity * 0.5 + Math.min(engagement * 20, 1) * 0.3 + freshness * 0.2
+  const freshness = recencyBoost(age)
+  // 최신 영상이 Popular에 더 잘 오도록 freshness 비중을 높임
+  return (
+    Math.min(velocity / 6, 1) * 0.3 +
+    Math.min(engagement * 20, 1) * 0.2 +
+    freshness * 0.5
+  )
 }
